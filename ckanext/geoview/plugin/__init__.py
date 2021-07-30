@@ -31,9 +31,6 @@ class GeoViewBase(p.SingletonPlugin):
     p.implements(p.IConfigurer, inherit=True)
     p.implements(p.IConfigurable, inherit=True)
 
-    proxy_enabled = False
-    same_domain = False
-
     def configure(self, config):
         basemapConfigFile = toolkit.config.get(
             "ckanext.geoview.basemaps", None
@@ -47,9 +44,11 @@ class GeoViewBase(p.SingletonPlugin):
         toolkit.add_template_directory(config, "../templates")
         toolkit.add_resource("../public", "ckanext-geoview")
 
-        self.proxy_enabled = "resource_proxy" in toolkit.config.get(
-            "ckan.plugins", ""
-        )
+    def proxy_enabled(self):
+        return p.plugin_loaded("resource_proxy")
+
+    def same_domain(self, data_dict):
+        return on_same_domain(data_dict)
 
 
 class OLGeoView(GeoViewMixin, GeoViewBase):
@@ -94,7 +93,6 @@ class OLGeoView(GeoViewMixin, GeoViewBase):
 
     def can_view(self, data_dict):
         format_lower = data_dict["resource"].get("format", "").lower()
-        same_domain = on_same_domain(data_dict)
 
         # Guess from file extension
         if not format_lower and data_dict["resource"].get("url"):
@@ -114,7 +112,7 @@ class OLGeoView(GeoViewMixin, GeoViewBase):
             view_formats = self.GEOVIEW_FORMATS
 
         correct_format = format_lower in view_formats
-        can_preview_from_domain = self.proxy_enabled or same_domain
+        can_preview_from_domain = self.proxy_enabled() or self.same_domain(data_dict)
 
         return correct_format and can_preview_from_domain
 
@@ -141,14 +139,12 @@ class OLGeoView(GeoViewMixin, GeoViewBase):
     def setup_template_variables(self, context, data_dict):
         import ckanext.resourceproxy.plugin as proxy
 
-        same_domain = on_same_domain(data_dict)
-
         if not data_dict["resource"].get("format"):
             data_dict["resource"][
                 "format"
             ] = self._guess_format_from_extension(data_dict["resource"]["url"])
 
-        if self.proxy_enabled and not same_domain:
+        if self.proxy_enabled() and not self.same_domain(data_dict):
             proxy_url = proxy.get_proxified_resource_url(data_dict)
             proxy_service_url = utils.get_proxified_service_url(data_dict)
         else:
@@ -192,10 +188,8 @@ class GeoJSONView(GeoViewBase):
 
         format_lower = resource.get("format", "").lower()
 
-        same_domain = on_same_domain(data_dict)
-
         if format_lower in self.GeoJSON:
-            return same_domain or self.proxy_enabled
+            return self.same_domain(data_dict) or self.proxy_enabled()
         return False
 
     def view_template(self, context, data_dict):
@@ -204,8 +198,7 @@ class GeoJSONView(GeoViewBase):
     def setup_template_variables(self, context, data_dict):
         import ckanext.resourceproxy.plugin as proxy
 
-        self.same_domain = data_dict["resource"].get("on_same_domain")
-        if self.proxy_enabled and not self.same_domain:
+        if self.proxy_enabled() and not self.same_domain(data_dict):
             data_dict["resource"]["original_url"] = data_dict["resource"].get(
                 "url"
             )
@@ -242,7 +235,7 @@ class WMTSView(GeoViewBase):
         format_lower = resource.get("format", "").lower()
 
         if format_lower in self.WMTS:
-            return self.same_domain or self.proxy_enabled
+            return self.same_domain(data_dict) or self.proxy_enabled()
         return False
 
     def view_template(self, context, data_dict):
@@ -251,8 +244,7 @@ class WMTSView(GeoViewBase):
     def setup_template_variables(self, context, data_dict):
         import ckanext.resourceproxy.plugin as proxy
 
-        self.same_domain = data_dict["resource"].get("on_same_domain")
-        if self.proxy_enabled and not self.same_domain:
+        if self.proxy_enabled() and not self.same_domain(data_dict):
             data_dict["resource"]["original_url"] = data_dict["resource"].get(
                 "url"
             )
@@ -289,7 +281,7 @@ class SHPView(GeoViewBase):
         name_lower = resource.get("name", "").lower()
 
         if format_lower in self.SHP or any([shp in name_lower for shp in self.SHP]):
-            return self.same_domain or self.proxy_enabled
+            return self.same_domain(data_dict) or self.proxy_enabled()
         return False
 
     def view_template(self, context, data_dict):
@@ -298,8 +290,7 @@ class SHPView(GeoViewBase):
     def setup_template_variables(self, context, data_dict):
         import ckanext.resourceproxy.plugin as proxy
 
-        self.same_domain = data_dict["resource"].get("on_same_domain")
-        if self.proxy_enabled and not self.same_domain:
+        if self.proxy_enabled() and not self.same_domain(data_dict):
             data_dict["resource"]["original_url"] = data_dict["resource"].get(
                 "url"
             )
