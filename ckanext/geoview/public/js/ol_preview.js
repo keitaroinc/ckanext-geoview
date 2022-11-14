@@ -39,7 +39,7 @@
             },
             'wfs': function(resource, proxyUrl, proxyServiceUrl, layerProcessor, map) {
                 var parsedUrl = resource.url.split('#');
-                var url = proxyServiceUrl || parsedUrl[0];
+                var url = proxyUrl || parsedUrl[0];
 
                 var ftName = parsedUrl.length > 1 && parsedUrl[1];
                 OL_HELPERS.withFeatureTypesLayers(url, layerProcessor, ftName, map, true /* useGET */);
@@ -49,7 +49,7 @@
                 // use the original URL for the getMap, as there's no need for a proxy for image requests
                 var getMapUrl = parsedUrl[0];
 
-                var url = proxyServiceUrl || getMapUrl;
+                var url = proxyUrl || getMapUrl;
 
                 var layerName = parsedUrl.length > 1 && parsedUrl[1];
                 OL_HELPERS.withWMSLayers(url, getMapUrl, layerProcessor, layerName, true /* useTiling*/, map );
@@ -57,7 +57,7 @@
             'wmts' : function(resource, proxyUrl, proxyServiceUrl, layerProcessor, map) {
                 var parsedUrl = resource.url.split('#');
 
-                var url = proxyServiceUrl || parsedUrl[0];
+                var url = proxyUrl || getMapUrl;
 
                 var layerName = parsedUrl.length > 1 && parsedUrl[1];
                 OL_HELPERS.withWMTSLayers(url, layerProcessor, layerName);
